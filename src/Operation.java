@@ -102,6 +102,8 @@ public class Operation extends JFrame {
         addFileChooserListener(endListButton, endListLabel, filePath, 2);
 
         addStartButtonListener(startButton);
+
+        addFindUserListener(findButton);
     }
 
     private void addFileChooserListener(JButton button, JLabel label, String[] filePath, int idx) {
@@ -122,6 +124,34 @@ public class Operation extends JFrame {
             String text = start();
 
             ta.setText(text);
+        });
+    }
+
+    private void addFindUserListener(JButton button) {
+        button.addActionListener(e -> {
+            ta2.setText("");
+
+            String id = tfName.getText();
+
+            if (id.equals("")) {
+                ta2.append("대출자 번호를 입력해주세요.");
+            } else if (userMap.containsKey(id)) {
+                User user = userMap.get(id);
+                List<Book> overdueBooks = user.getOverdueBooks();
+                String bookList = overdueBooks.stream()
+                        .map(Book::toString)
+                        .collect(Collectors.joining("\n"));
+
+                ta2.append(
+                        "대출자 번호: " + user.getId() + " 이름: " + user.getName() + "\n"
+                                + "연체된 도서: \n"
+                                + bookList
+                );
+            } else {
+                ta2.append(id + "에 대한 정보는 없습니다.");
+            }
+
+            tfName.setText("");
         });
     }
 
