@@ -1,34 +1,33 @@
-import classes.Book;
-import classes.CheckOut;
-import classes.Management;
-import classes.User;
+import output.ManagementSum;
+import output.OverdueBook;
+import repository.OverdueRepository;
+import service.OverDueService;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.List;
 import java.util.stream.Collectors;
 
 
 public class Operation extends JFrame {
+
+
+    private final OverdueRepository overdueRepository = new OverdueRepository();
+    private final OverDueService overDueService = new OverDueService(overdueRepository);
+
     JFileChooser fileChooser = new JFileChooser();
     FileNameExtensionFilter filter = new FileNameExtensionFilter("CSV", "csv");
+
     private JTextArea ta = new JTextArea(10, 30);
     private JTextArea ta2 = new JTextArea(10, 30);
     private JTextField tfName = new JTextField(30);
-    private HashMap<String, User> userMap = new HashMap<>();
-    private int manageNum = 0;
-    private int massageNum = 0;
-    private int callNum = 0;
-    private int etcNum = 0;
+
+
+
+    private ManagementSum manageNum = new ManagementSum();
+    private List<OverdueBook> overdueBooks = new ArrayList<>();
     private static final String[] filePath = new String[3];
     public Operation() {
         setTitle("연체자 통계");
@@ -73,7 +72,7 @@ public class Operation extends JFrame {
 
         JScrollPane sp = new JScrollPane(ta);
         sp.setLocation(10, 220);
-        sp.setSize(430, 250);
+        sp.setSize(850, 250);
         c.add(sp);
 
         JPanel findPanel = new JPanel();
@@ -94,7 +93,7 @@ public class Operation extends JFrame {
         sp2.setSize(430, 250);
         c.add(sp2);
 
-        setSize(450, 900);
+        setSize(900, 900);
         setVisible(true);
 
         addFileChooserListener(overdueButton, overdueLabel, filePath, 0);
@@ -103,7 +102,7 @@ public class Operation extends JFrame {
 
         addStartButtonListener(startButton);
 
-        addFindUserListener(findButton);
+//        addFindUserListener(findButton);
     }
 
     private void addFileChooserListener(JButton button, JLabel label, String[] filePath, int idx) {
@@ -127,33 +126,33 @@ public class Operation extends JFrame {
         });
     }
 
-    private void addFindUserListener(JButton button) {
-        button.addActionListener(e -> {
-            ta2.setText("");
-
-            String id = tfName.getText();
-
-            if (id.equals("")) {
-                ta2.append("대출자 번호를 입력해주세요.");
-            } else if (userMap.containsKey(id)) {
-                User user = userMap.get(id);
-                List<Book> overdueBooks = user.getOverdueBooks();
-                String bookList = overdueBooks.stream()
-                        .map(Book::toString)
-                        .collect(Collectors.joining("\n"));
-
-                ta2.append(
-                        "대출자 번호: " + user.getId() + " 이름: " + user.getName() + "\n"
-                                + "연체된 도서: \n"
-                                + bookList
-                );
-            } else {
-                ta2.append(id + "에 대한 정보는 없습니다.");
-            }
-
-            tfName.setText("");
-        });
-    }
+//    private void addFindUserListener(JButton button) {
+//        button.addActionListener(e -> {
+//            ta2.setText("");
+//
+//            String id = tfName.getText();
+//
+//            if (id.equals("")) {
+//                ta2.append("대출자 번호를 입력해주세요.");
+//            } else if (userMap.containsKey(id)) {
+//                User user = userMap.get(id);
+//                List<Book> overdueBooks = user.getOverdueBooks();
+//                String bookList = overdueBooks.stream()
+//                        .map(Book::toString)
+//                        .collect(Collectors.joining("\n"));
+//
+//                ta2.append(
+//                        "대출자 번호: " + user.getId() + " 이름: " + user.getName() + "\n"
+//                                + "연체된 도서: \n"
+//                                + bookList
+//                );
+//            } else {
+//                ta2.append(id + "에 대한 정보는 없습니다.");
+//            }
+//
+//            tfName.setText("");
+//        });
+//    }
 
 
     public static void main(String[] args) {
@@ -161,210 +160,54 @@ public class Operation extends JFrame {
     }
 
     public String start() {
-        insertDataFirst();
-        insertDataThird();
-        insertDataSecond();
+        overDueService.insertDataFirst(filePath);
+        overDueService.insertDataThird(filePath);
+        overDueService.insertDataSecond(filePath, manageNum);
 
         return output();
     }
 
-    private void insertDataFirst() {
-        try (BufferedReader br = Files.newBufferedReader(Paths.get(filePath[0]), Charset.forName("UTF-8"))) {
-            String line;
-            boolean isHeader = true;
-            while ((line = br.readLine()) != null) {
-                if (isHeader) {
-                    isHeader = false;
-                    continue;
-                }
-                String[] array = line.split(",");
-                if (array.length < 9) {
-                    continue;
-                }
-                User user = createUser(array);
-                Book book = createBook(array);
-                CheckOut checkOut = createCheckOut(array);
-                user.insertCheckOutInfo(book, checkOut);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void insertDataSecond() {
-        try (BufferedReader br = Files.newBufferedReader(Paths.get(filePath[1]), Charset.forName("UTF-8"))) {
-            String line;
-            boolean isHeader = true;
-            while ((line = br.readLine()) != null) {
-                if (isHeader) {
-                    isHeader = false;
-                    continue;
-                }
-                String[] array = line.split(",");
-                if (array.length < 4) {
-                    continue;
-                }
-                String means = array[0];
-                String id = array[1];
-                // todo: 관리 날짜가 LocalDate 가 아닌 LocalDateTime 형태로 뽑을 수 있는지 확인
-                LocalDateTime mangeDate = LocalDateTime.parse(array[2] + " 12:00", DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
-                int baseMonth = Integer.parseInt(array[3]);
-                User user = userMap.get(id);
-                if (user != null) {
-                    updateUserCheckOutInfo(user, means, baseMonth, mangeDate);
-                }
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void insertDataThird() {
-        try (BufferedReader br = Files.newBufferedReader(Paths.get(filePath[2]), Charset.forName("UTF-8"))) {
-            String line;
-            boolean isHeader = true;
-            while ((line = br.readLine()) != null) {
-                if (isHeader) {
-                    isHeader = false;
-                    continue;
-                }
-                String[] array = line.split(",");
-                if (array.length < 5) {
-                    continue;
-                }
-                String id = array[1];
-                String bookId = array[2];
-                LocalDateTime endDate = LocalDateTime.parse(array[4], DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
-                User user = userMap.get(id);
-                if (user != null) {
-                    updateUserCheckOutStatus(user, bookId, endDate);
-                }
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
     private String output() {
-        int overdueUserCount = (int) userMap.values().stream()
-                .filter(this::hasOverdueCheckout)
-                .count();
+        int overdueUserCount = overDueService.getOverdueUserCount();
+        int newCount = overDueService.getNewOverdueUserCount();
+        int longTermCount = overDueService.getLongTermOverdueUserCount();
+        int endCount = overDueService.getEndUserCount();
 
-        int newCount = (int) userMap.values().stream()
-                .filter(this::hasNewCheckout)
-                .count();
-
-        int longTermCount = (int) userMap.values().stream()
-                .filter(this::hasLongTermCheckout)
-                .count();
-
-        int endCount = (int) userMap.values().stream()
-                .filter(this::hasEndCheckout)
-                .count();
-
-        List<Book> overdueBooks = countOverdueBooks();
+        List<OverdueBook> overdueBooks = overDueService.getOverdueBooks();
         String bookList = overdueBooks.stream()
-                .map(Book::toString)
+                .map(OverdueBook::toString)
                 .collect(Collectors.joining("\n"));
 
+        StringBuilder sb = new StringBuilder();
+        sb.append("관리 횟수: ").append(manageNum.getManageNum()).append("\n").append("\n")
+                .append("  문자: ").append(manageNum.getMassageNum()).append("\n").append("  ");
+
+        for (int i = 1; i <= 12; i++) {
+            sb.append(i).append("월: ").append(manageNum.getNumberOfMonthlyMessageManagement()[i]).append(" | ");
+        }
+        sb.append("\n");
+
+        sb.append("  전화: ").append(manageNum.getCallNum()).append("\n").append("  ");
+
+        for (int i = 1; i <= 12; i++) {
+            sb.append(i).append("월: ").append(manageNum.getNumberOfMonthlyCallManagement()[i]).append(" | ");
+        }
+        sb.append("\n");
+
+        sb.append("  기타: ").append(manageNum.getEtcNum()).append("\n").append("  ");
+
+        for (int i = 1; i <= 12; i++) {
+            sb.append(i).append("월: ").append(manageNum.getNumberOfMonthlyETCManagement()[i]).append(" | ");
+        }
+        sb.append("\n");
+
+        String result = sb.toString().trim();
+
         return
-                "관리 횟수: " + manageNum + "\n"
-                + "     문자: " + massageNum + ", 전화: " + callNum + ", 기타: " + etcNum + "\n"
+                result + "\n" + "\n"
                 + "연체자: " + overdueUserCount + "\n"
-                + "     신규: " + newCount + ", 장기: " + longTermCount + ", 관리중단: " + endCount + "\n"
-                + "연체도서: " + overdueBooks.size() + "\n"
+                + "     신규: " + newCount + ", 장기: " + longTermCount + ", 관리중단: " + endCount + "\n" + "\n"
+                + "연체도서: " + overdueBooks.size() + "\n" + "\n"
                 + bookList;
-    }
-
-    private boolean hasNewCheckout(User user) {
-        return user.getCheckOutHashMap().values().stream()
-                .anyMatch(checkOut -> checkOut.getCheckOutStatus() == CheckOut.CheckOutStatus.NEW);
-    }
-
-    private boolean hasLongTermCheckout(User user) {
-        return user.getCheckOutHashMap().values().stream()
-                .anyMatch(checkOut -> checkOut.getCheckOutStatus() == CheckOut.CheckOutStatus.LONG_TERM);
-    }
-
-    private boolean hasEndCheckout(User user) {
-        return user.getCheckOutHashMap().values().stream()
-                .allMatch(checkOut -> checkOut.getCheckOutStatus() == CheckOut.CheckOutStatus.END);
-    }
-
-    private boolean hasOverdueCheckout(User user) {
-        return user.getCheckOutHashMap().values().stream()
-                .anyMatch(checkOut -> checkOut.getCheckOutStatus() != CheckOut.CheckOutStatus.END);
-    }
-
-    private List<Book> countOverdueBooks() {
-        List<Book> overdueBooks = new ArrayList<>();
-        userMap.values().stream()
-        .forEach(user -> user.getOverdueBooks().stream().forEach(book -> overdueBooks.add(book)));
-
-        return overdueBooks;
-
-//        return (int) userMap.values().stream()
-//                .flatMap(user -> user.getCheckOutHashMap().values().stream())
-//                .filter(checkOut -> checkOut.getCheckOutStatus() != CheckOut.CheckOutStatus.END)
-//                .count();
-    }
-
-    private User createUser(String[] array) {
-        String id = array[1];
-        return userMap.computeIfAbsent(id, k -> {
-            String name = array[0];
-            String phoneNumber = array[2];
-            return new User(id, name, phoneNumber);
-        });
-    }
-
-    private Book createBook(String[] array) {
-        String bookId = array[3];
-        String bookName = array[4];
-        return new Book(bookId, bookName);
-    }
-
-    private CheckOut createCheckOut(String[] array) {
-        LocalDateTime startDate = LocalDateTime.parse(array[5], DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
-        LocalDateTime dueDate = LocalDateTime.parse(array[6], DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
-        int lateDate = Integer.parseInt(array[7]);
-        int baseMonth = Integer.parseInt(array[8]);
-        return new CheckOut(startDate, dueDate, lateDate, baseMonth);
-    }
-
-    private void updateUserCheckOutInfo(User user, String mean, int baseMonth, LocalDateTime manageDate) {
-        user.getCheckOutHashMap().values().stream()
-            .filter(checkOut -> checkOut.getEndDate().isEmpty() ||
-                    checkOut.getEndDate().filter(endDate -> endDate.isAfter(manageDate)).isPresent())
-            .forEach(checkOut -> {
-                checkOut.setBaseMonth(baseMonth);
-                switch (mean) {
-                    case "문자":
-                        checkOut.addManagement(new Management(manageDate, Management.ManagementMean.MASSAGE));
-                        massageNum++;
-                        break;
-                    case "전화":
-                        checkOut.addManagement(new Management(manageDate, Management.ManagementMean.CALL));
-                        callNum++;
-                        break;
-                    case "기타":
-                        checkOut.addManagement(new Management(manageDate, Management.ManagementMean.ETC));
-                        etcNum++;
-                        break;
-                    default:
-                        break;
-            }
-            manageNum++;
-        });
-    }
-
-    private void updateUserCheckOutStatus(User user, String bookId, LocalDateTime endDate) {
-        user.getCheckOutHashMap().entrySet().stream()
-                .filter(entry -> entry.getKey().getId().equals(bookId))
-                .map(entry -> entry.getValue())
-                .forEach(checkOut -> {
-                    checkOut.setEndDate(endDate);
-                    checkOut.setCheckOutStatus(CheckOut.CheckOutStatus.END);
-                });
     }
 }

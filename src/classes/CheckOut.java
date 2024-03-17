@@ -61,4 +61,8 @@ public class CheckOut {
     public void addManagement(Management management) {
         this.managementList.add((management));
     }
+
+    public List<Management> getManagementList() {
+        return managementList;
+    }
 }

@@ -25,4 +25,12 @@ public class Management {
         this.manageDate = manageDate;
         this.management = management;
     }
+
+    public LocalDateTime getManageDate() {
+        return manageDate;
+    }
+
+    public ManagementMean getManagement() {
+        return management;
+    }
 }
