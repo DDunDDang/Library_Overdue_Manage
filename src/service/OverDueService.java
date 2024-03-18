@@ -152,7 +152,7 @@ public class OverDueService {
     private void updateUserCheckOutInfo(User user, String mean, int baseMonth, LocalDateTime manageDate, ManagementSum manageNum) {
         user.getCheckOutHashMap().values().stream()
                 .filter(checkOut -> checkOut.getEndDate().isEmpty() ||
-                        checkOut.getEndDate().filter(manageDate::isAfter).isPresent())
+                        checkOut.getEndDate().get().isAfter(manageDate))
                 .forEach(checkOut -> {
                     checkOut.setBaseMonth(baseMonth);
                     switch (mean) {
