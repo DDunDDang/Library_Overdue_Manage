@@ -45,4 +45,11 @@ public class User {
                 .toList();
         return overdueBooks;
     }
+
+    public List<Book> getReturnedBooks() {
+        List<Book> overdueBooks = checkOutHashMap.keySet().stream()
+                .filter(book -> checkOutHashMap.get(book).getCheckOutStatus() == CheckOut.CheckOutStatus.END)
+                .toList();
+        return overdueBooks;
+    }
 }

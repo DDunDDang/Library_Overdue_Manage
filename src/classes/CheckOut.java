@@ -65,4 +65,8 @@ public class CheckOut {
     public List<Management> getManagementList() {
         return managementList;
     }
+
+    public LocalDateTime getDueDate() {
+        return dueDate;
+    }
 }

@@ -121,6 +121,14 @@ public class OverDueService {
         return overdueRepository.getOverdueBookList();
     }
 
+    public List<OverdueBook> getReturnedBooks() {
+        List<User> users = overdueRepository.getUserList();
+        List<Book> returnedBooks = users.stream()
+                .flatMap(user -> user.getReturnedBooks().stream())
+                .toList();
+
+        return overdueRepository.getReturnedBook(returnedBooks);
+    }
 
 
 

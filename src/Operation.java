@@ -6,7 +6,6 @@ import service.OverDueService;
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
-import java.util.*;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -27,7 +26,6 @@ public class Operation extends JFrame {
 
 
     private ManagementSum manageNum = new ManagementSum();
-    private List<OverdueBook> overdueBooks = new ArrayList<>();
     private static final String[] filePath = new String[3];
     public Operation() {
         setTitle("연체자 통계");
@@ -90,7 +88,7 @@ public class Operation extends JFrame {
 
         JScrollPane sp2 = new JScrollPane(ta2);
         sp2.setLocation(10, 570);
-        sp2.setSize(430, 250);
+        sp2.setSize(850, 250);
         c.add(sp2);
 
         setSize(900, 900);
@@ -120,9 +118,11 @@ public class Operation extends JFrame {
 
     private void addStartButtonListener(JButton button) {
         button.addActionListener(e -> {
-            String text = start();
+            String text1 = start();
+            String text2 = output2();
 
-            ta.setText(text);
+            ta.setText(text1);
+            ta2.setText(text2);
         });
     }
 
@@ -164,10 +164,10 @@ public class Operation extends JFrame {
         overDueService.insertDataThird(filePath);
         overDueService.insertDataSecond(filePath, manageNum);
 
-        return output();
+        return output1();
     }
 
-    private String output() {
+    private String output1() {
         int overdueUserCount = overDueService.getOverdueUserCount();
         int newCount = overDueService.getNewOverdueUserCount();
         int longTermCount = overDueService.getLongTermOverdueUserCount();
@@ -209,5 +209,77 @@ public class Operation extends JFrame {
                 + "     신규: " + newCount + ", 장기: " + longTermCount + ", 관리중단: " + endCount + "\n" + "\n"
                 + "연체도서: " + overdueBooks.size() + "\n" + "\n"
                 + bookList;
+    }
+
+    private String output2() {
+        List<OverdueBook> returnedBooks = overDueService.getReturnedBooks();
+
+        int[] manage = new int[13];
+        int[] message = new int[13];
+        int[] call = new int[13];
+        int[] etc = new int[13];
+        long avgDate = avg(returnedBooks);
+
+
+
+        returnedBooks.forEach(overdueBook -> {
+            count(manage, message, overdueBook.getMessage());
+            count(manage, call, overdueBook.getCall());
+            count(manage, etc, overdueBook.getEtc());
+        });
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("관리 횟수: ").append(sum(manage)).append("\n").append("\n")
+                .append("  문자: ").append(sum(message)).append("\n").append("  ");
+
+        for (int i = 1; i <= 12; i++) {
+            sb.append(i).append("월: ").append(message[i]).append(" | ");
+        }
+        sb.append("\n");
+
+        sb.append("  전화: ").append(sum(call)).append("\n").append("  ");
+
+        for (int i = 1; i <= 12; i++) {
+            sb.append(i).append("월: ").append(call[i]).append(" | ");
+        }
+        sb.append("\n");
+
+        sb.append("  기타: ").append(sum(etc)).append("\n").append("  ");
+
+        for (int i = 1; i <= 12; i++) {
+            sb.append(i).append("월: ").append(etc[i]).append(" | ");
+        }
+        sb.append("\n");
+
+        String result = sb.toString().trim();
+
+        String bookList = returnedBooks.stream()
+                .map(OverdueBook::toString)
+                .collect(Collectors.joining("\n"));
+        return "반납된 도서 통계" + "\n" + "\n"
+                + "반납된 도서 수: " + returnedBooks.size() + "\n" + "\n"
+                + "평균 연체 일 수: " + avgDate + "\n" + "\n"
+                + result + "\n" + "\n"
+                + bookList;
+    }
+
+    private void count(int[] manage, int[] arr, int[] insert) {
+        for (int i = 1; i < arr.length; i++) {
+            manage[i] += insert[i];
+            arr[i] += insert[i];
+        }
+    }
+
+    private int sum(int[] arr) {
+        int result = 0;
+        for (int i = 1; i < arr.length; i++) {
+            result += arr[i];
+        }
+
+        return result;
+    }
+
+    private long avg(List<OverdueBook> books) {
+        return books.stream().mapToLong(book -> book.getOverDueCount()).sum() / books.size();
     }
 }

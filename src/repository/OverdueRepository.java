@@ -25,11 +25,12 @@ public class OverdueRepository {
 
             checkOutHashMap.keySet().forEach(book -> {
                 OverdueBook overdueBook;
+                CheckOut checkOut = checkOutHashMap.get(book);
                 String bookId = book.getId();
                 if (overdueBookList.containsKey(bookId)) {
                     overdueBook = overdueBookList.get(bookId);
                 } else {
-                    overdueBook = new OverdueBook(bookId, book.getName());
+                    overdueBook = new OverdueBook(bookId, book.getName(), checkOut);
                 }
 
                 checkOutHashMap.get(book).getManagementList().forEach(management -> {
@@ -61,6 +62,20 @@ public class OverdueRepository {
         });
 
         return overdueBooks;
+    }
+
+    public List<OverdueBook> getReturnedBook(List<Book> books) {
+        List<OverdueBook> overdueBooks = new ArrayList<>();
+
+        books.stream().map(book -> book.getId()).forEach(key -> {
+            overdueBooks.add(overdueBookList.get(key));
+        });
+
+        return overdueBooks;
+    }
+
+    public List<User> getUserList() {
+        return userMap.keySet().stream().map(id -> userMap.get(id)).toList();
     }
 
     public User addUser(String[] array) {
