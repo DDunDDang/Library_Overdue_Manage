@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>연체자 관리 서비스</title>
+    <script>
+        // 파일 업로드 관련 변수
+        var filesUploaded = {
+            'file1': false,
+            'file2': false,
+            'file3': false
+        };
+
+        function CSV(endpoint, fileId) {
+            var formData = new FormData();
+            var fileInput = document.getElementById(fileId);
+            formData.append('file', fileInput.files[0]);
+
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', endpoint, true);
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    var messageElement = document.getElementById(fileId + 'Message');
+                    messageElement.textContent = xhr.responseText;
+
+                    // 파일 업로드가 성공하면 해당 파일의 업로드 상태를 true로 변경
+                    filesUploaded[fileId] = true;
+
+                    // 모든 파일 업로드가 완료되면 다운로드 버튼 활성화
+                    if (allFilesUploaded()) {
+                        document.getElementById('downloadButton').disabled = false;
+                    }
+                }
+            };
+            xhr.send(formData);
+        }
+
+        function selectFile(fileId) {
+            document.getElementById(fileId).click();
+        }
+
+        // 모든 파일 업로드가 완료되었는지 확인하는 함수
+        function allFilesUploaded() {
+            for (var key in filesUploaded) {
+                if (!filesUploaded[key]) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    </script>
+    <style>
+        .file-upload {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<h1>연체자 관리 서비스</h1>
+<div>
+    연체 도서 목록 파일을 업로드하세요.
+    <br />
+    <br />
+    <button onclick="selectFile('file1')" style="cursor: pointer;">파일 선택</button>
+    <input type="file" id="file1" class="file-upload" onchange="CSV('/overdue-first', 'file1')">
+</div>
+<div id="file1Message"></div>
+
+<div>
+    반납 목록 파일을 업로드하세요.
+    <br />
+    <br />
+    <button onclick="selectFile('file2')" style="cursor: pointer;">파일 선택</button>
+    <input type="file" id="file2" class="file-upload" onchange="CSV('/overdue-second', 'file2')">
+</div>
+<div id="file2Message"></div>
+
+<div>
+    관리 목록 파일을 업로드하세요.
+    <br />
+    <br />
+    <button onclick="selectFile('file3')" style="cursor: pointer;">파일 선택</button>
+    <input type="file" id="file3" class="file-upload" onchange="CSV('/overdue-third', 'file3')">
+</div>
+<div id="file3Message"></div>
+
+<div>
+    <!-- 다운로드 버튼은 초기에 비활성화되며, 모든 파일 업로드가 완료되면 활성화됨 -->
+    <button id="downloadButton" onclick="location.href='/overdue/download'" disabled>다운로드</button>
+</div>
+
+</body>
+</html>
