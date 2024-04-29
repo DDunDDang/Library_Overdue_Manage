@@ -37,6 +37,7 @@ public class Manage {
     @ManyToOne
     @JoinColumn(name = "checkout_id")
     private CheckOut checkOut;
+    @Getter
     private LocalDateTime manageDate;
     @Getter
     private Type type;
